@@ -4,19 +4,15 @@ import path from "node:path";
 import readline from "node:readline";
 import { effectiveDataDir } from "../config";
 
-export const KULALA_CORE_DOWNLOAD_URL =
-  "https://core.kulala.app/releases/%s/%s";
+export const KULALA_CORE_DOWNLOAD_URL = "https://core.kulala.app/releases/%s/%s";
 
-export const LICENSE_TOKEN_HELP =
-  "Set KULALA_CORE_LICENSE_TOKEN to download kulala-core.";
+export const LICENSE_TOKEN_HELP = "Set KULALA_CORE_LICENSE_TOKEN to download kulala-core.";
 
 export class LicenseRejectedError extends Error {
   readonly status: number;
 
   constructor(status: number) {
-    super(
-      `Kulala Core license token was rejected (${status}). ${LICENSE_TOKEN_HELP}`,
-    );
+    super(`Kulala Core license token was rejected (${status}). ${LICENSE_TOKEN_HELP}`);
     this.name = "LicenseRejectedError";
     this.status = status;
   }
@@ -31,22 +27,20 @@ export function licenseTokenFile(): string {
 /** Previous config-directory location, so a token entered before this move is reused. */
 function legacyLicenseTokenFile(): string {
   if (process.platform === "win32") {
-    const base =
-      process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
-    return path.join(base, "kulala", "license-token");
+    const base = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
+    return path.join(base, "kulala-core", "license-token");
   }
   if (process.platform === "darwin") {
     return path.join(
       os.homedir(),
       "Library",
       "Application Support",
-      "kulala",
+      "kulala-core",
       "license-token",
     );
   }
-  const base =
-    process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(base, "kulala", "license-token");
+  const base = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
+  return path.join(base, "kulala-core", "license-token");
 }
 
 function readTokenFile(tokenFile: string): string | null {
@@ -62,9 +56,7 @@ function isDefaultTokenFile(tokenFile: string): boolean {
   return path.resolve(tokenFile) === path.resolve(licenseTokenFile());
 }
 
-export function readSavedLicenseToken(
-  tokenFile = licenseTokenFile(),
-): string | null {
+export function readSavedLicenseToken(tokenFile = licenseTokenFile()): string | null {
   const saved = readTokenFile(tokenFile);
   if (saved) return saved;
   if (!isDefaultTokenFile(tokenFile)) return null;
@@ -79,10 +71,7 @@ export function readSavedLicenseToken(
   return legacy;
 }
 
-export function saveLicenseToken(
-  token: string,
-  tokenFile = licenseTokenFile(),
-): void {
+export function saveLicenseToken(token: string, tokenFile = licenseTokenFile()): void {
   fs.mkdirSync(path.dirname(tokenFile), { recursive: true });
   fs.writeFileSync(tokenFile, token, { encoding: "utf8", mode: 0o600 });
   if (process.platform !== "win32") {
@@ -106,9 +95,7 @@ export function deleteSavedLicenseToken(tokenFile = licenseTokenFile()): void {
 
 export function promptHiddenLicenseToken(): Promise<string> {
   if (!process.stdin.isTTY) {
-    return Promise.reject(
-      new Error(`KULALA_CORE_LICENSE_TOKEN is not set. ${LICENSE_TOKEN_HELP}`),
-    );
+    return Promise.reject(new Error(`KULALA_CORE_LICENSE_TOKEN is not set. ${LICENSE_TOKEN_HELP}`));
   }
 
   return new Promise((resolve, reject) => {
@@ -185,9 +172,7 @@ export async function withLicenseToken(options: {
 }): Promise<void> {
   const resolved = await resolveLicenseToken(options);
   if (!resolved) {
-    throw new Error(
-      `KULALA_CORE_LICENSE_TOKEN is not set. ${LICENSE_TOKEN_HELP}`,
-    );
+    throw new Error(`KULALA_CORE_LICENSE_TOKEN is not set. ${LICENSE_TOKEN_HELP}`);
   }
 
   try {
