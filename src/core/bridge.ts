@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -119,13 +119,64 @@ function contentRequestsKeepAlive(payload: CorePayload): boolean {
   );
 }
 
+export type FormatJsonOptions = {
+  indent?: number;
+  expand_tabs?: boolean;
+  sort_keys?: boolean;
+  text?: string;
+};
+
+let cachedExecutable: string | undefined;
+
+function formatJsonWithExe(
+  exe: string,
+  value: unknown,
+  opts?: FormatJsonOptions,
+): string | undefined {
+  const payload: Record<string, unknown> = {
+    action: "format_json",
+    indent: opts?.indent,
+    expand_tabs: opts?.expand_tabs,
+    sort_keys: opts?.sort_keys,
+  };
+  if (opts?.text !== undefined) payload.text = opts.text;
+  else payload.value = value;
+
+  const result = spawnSync(exe, [], {
+    input: `${JSON.stringify(payload)}\n`,
+    encoding: "utf8",
+    env: { ...process.env, KULALA_CORE_DATA_DIR: effectiveDataDir() },
+  });
+  if (result.status !== 0 || !result.stdout) return undefined;
+  try {
+    const parsed = JSON.parse(result.stdout) as { success?: boolean; content?: string };
+    if (parsed.success === true && typeof parsed.content === "string") return parsed.content;
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+/** Pretty-print JSON with the cached kulala-core binary. */
+export function formatJsonSync(value: unknown, opts?: FormatJsonOptions): string | undefined {
+  if (!cachedExecutable) return undefined;
+  return formatJsonWithExe(cachedExecutable, value, opts);
+}
+
 export class KulalaCoreBridge {
   private active: ChildProcessWithoutNullStreams | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   async executable(): Promise<string> {
-    return ensureCoreInstalled(this.context);
+    const exe = await ensureCoreInstalled(this.context);
+    cachedExecutable = exe;
+    return exe;
+  }
+
+  async formatJson(value: unknown, opts?: FormatJsonOptions): Promise<string | undefined> {
+    const exe = await this.executable();
+    return formatJsonWithExe(exe, value, opts);
   }
 
   cancelActive(): boolean {
@@ -207,7 +258,10 @@ export class KulalaCoreBridge {
           child.stdin.write(`${JSON.stringify(payload)}\n`);
           child.stdin.end();
         })
-        .catch(reject);
+        .catch((error: unknown) => {
+          const msg = error instanceof Error ? error.message : String(error);
+          resolve({ stdout: "", stderr: msg, code: 1 });
+        });
     });
   }
 
@@ -640,7 +694,12 @@ export class KulalaCoreBridge {
     },
     cwd?: string,
   ): Promise<WebSocketSessionHandle | undefined> {
-    const exe = await this.executable();
+    let exe: string;
+    try {
+      exe = await this.executable();
+    } catch {
+      return undefined;
+    }
     const tmp = path.join(
       os.tmpdir(),
       `kulala-ws-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,

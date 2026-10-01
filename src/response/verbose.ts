@@ -1,3 +1,4 @@
+import { formatJsonSync } from "../core/bridge";
 import type { KulalaRequestResult } from "../core/types";
 import type { VerboseBodyView, VerboseView } from "../../shared/response-view";
 import { formatBodyDisplay } from "./body";
@@ -27,12 +28,8 @@ function formatRequestBody(body: string | undefined): VerboseBodyView {
   }
   const trimmed = body.trim();
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    try {
-      const text = JSON.stringify(JSON.parse(body), null, 2);
-      return { bodyKind: "json", body: text };
-    } catch {
-      // not JSON
-    }
+    const text = formatJsonSync(undefined, { text: body });
+    if (text) return { bodyKind: "json", body: text };
   }
   return { bodyKind: "text", body };
 }

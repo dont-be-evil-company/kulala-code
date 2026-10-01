@@ -27,7 +27,7 @@ export function defaultEnv(): string {
 export function downloadUrlTemplate(): string {
   return getConfig().get<string>(
     "downloadUrl",
-    "https://github.com/dont-be-evil-company/kulala-core/releases/download/%s/%s",
+    "https://core.kulala.app/releases/%s/%s",
   );
 }
 

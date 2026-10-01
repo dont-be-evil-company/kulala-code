@@ -27,13 +27,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const diagnostics = new KulalaDiagnostics(bridge, context);
   const statusBar = new KulalaStatusBar(context);
 
-  try {
-    await bridge.executable();
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    void vscode.window.showErrorMessage(`Kulala: ${msg}`);
-  }
-
   await registerKulalaSyntax(context);
 
   const completion = new KulalaCompletionProvider(bridge, context);

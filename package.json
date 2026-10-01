@@ -1,5 +1,5 @@
 {
-  "name": "kulala",
+  "name": "kulala-code",
   "displayName": "Kulala",
   "version": "1.0.0",
   "description": "A fully-featured HTTP/GraphQL/gRPC/Websocket-client interface for (Visual Studio) Code, that supports the Jetbrains .http spec (with full scripting support).",
@@ -13,14 +13,14 @@
     "http",
     "rest"
   ],
-  "homepage": "https://github.com/dont-be-evil-company/kulala.vscode",
+  "homepage": "https://github.com/dont-be-evil-company/kulala-code",
   "bugs": {
-    "url": "https://github.com/dont-be-evil-company/kulala.vscode/issues"
+    "url": "https://github.com/dont-be-evil-company/kulala-code/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dont-be-evil-company/kulala.vscode"
+    "url": "https://github.com/dont-be-evil-company/kulala-code"
   },
   "publisher": "dont-be-evil-company",
   "main": "./dist/extension.js",
@@ -211,11 +211,11 @@
         "kulala.corePath": {
           "type": "string",
           "default": "",
-          "description": "Path to the kulala-core executable. When empty, Kulala downloads kulala-core from GitHub releases."
+          "description": "Path to the kulala-core executable. When empty, Kulala downloads kulala-core from core.kulala.app."
         },
         "kulala.coreVersion": {
           "type": "string",
-          "default": "1.1.0",
+          "default": "1.3.1",
           "description": "kulala-core release version to download when corePath is not set."
         },
         "kulala.dataDir": {
@@ -235,8 +235,8 @@
         },
         "kulala.downloadUrl": {
           "type": "string",
-          "default": "https://github.com/dont-be-evil-company/kulala-core/releases/download/%s/%s",
-          "description": "URL template for kulala-core downloads (%s = tag, %s = asset filename)."
+          "default": "https://core.kulala.app/releases/%s/%s",
+          "description": "URL template for kulala-core downloads (%s = version, %s = asset filename)."
         },
         "kulala.responseView": {
           "type": "string",

@@ -1,3 +1,4 @@
+import { formatJsonSync } from "../core/bridge";
 import type { KulalaRequestResult, KulalaResponseBody } from "../core/types";
 
 export type BodyKind = "json" | "text" | "image" | "binary";
@@ -111,7 +112,8 @@ export function formatBodyDisplay(body: KulalaResponseBody | undefined): BodyDis
     return { kind: "text", text: "" };
   }
   if (body.type === "json") {
-    const text = body.formatted ?? JSON.stringify(body.content, null, 2);
+    const text =
+      body.formatted ?? formatJsonSync(body.content) ?? JSON.stringify(body.content);
     return { kind: "json", text };
   }
   if (body.type === "binary") {

@@ -2,7 +2,7 @@
 
 ![Kulala Logo](images/logo.svg)
 
-# kulala.vscode
+# kulala-code
 
 [![Made with love][badge-made-with-love]][contributors]
 [![Discord][badge-discord]][discord]
@@ -51,8 +51,9 @@ Kulala is swahili for "rest" or "relax."
 ## Requirements
 
 - VS Code **1.105** or newer
-- Network access on first run
-  (downloads `kulala-core` from GitHub releases unless `kulala.corePath` is set)
+- Network access the first time kulala-core is needed
+  (downloads `kulala-core` from core.kulala.app unless `kulala.corePath` is set;
+  prompts for a license token when `KULALA_CORE_LICENSE_TOKEN` is unset)
 
 ## Install
 
@@ -63,7 +64,7 @@ Install **Kulala** (`dont-be-evil-company.kulala`) from the VS Code Marketplace.
 ### From source
 
 ```bash
-cd kulala.vscode
+cd kulala-code
 pnpm install
 pnpm run build
 ```
@@ -184,7 +185,7 @@ MIT
 [badge-discord]: https://the-dont-be-evil-company.com/assets/badges/discord.svg
 [discord]: https://the-dont-be-evil-company.com/discord
 [badge-made-with-love]: https://the-dont-be-evil-company.com/assets/badges/made-with-love.svg
-[contributors]: https://github.com/dont-be-evil-company/kulala.vscode/graphs/contributors
+[contributors]: https://github.com/dont-be-evil-company/kulala-code/graphs/contributors
 [kulala-cli]: https://github.com/dont-be-evil-company/kulala-cli
 [kulala-fmt]: https://github.com/dont-be-evil-company/kulala-fmt
 [kulala-desktop]: https://github.com/dont-be-evil-company/kulala-desktop
@@ -192,13 +193,13 @@ MIT
 [kulala-core]: https://github.com/dont-be-evil-company/kulala-core
 [kulala-github-action]: https://github.com/dont-be-evil-company/kulala-github-action
 [badge-development-status]: https://the-dont-be-evil-company.com/assets/badges/development-status.svg
-[development-status]: https://the-dont-be-evil-company.com/roadmap?filter=kulala.vscode
+[development-status]: https://the-dont-be-evil-company.com/roadmap?filter=kulala-code
 [badge-ai-policy]: https://the-dont-be-evil-company.com/assets/badges/ai-policy.svg
 [ai-policy]: https://the-dont-be-evil-company.com/ai-policy
 [badge-our-manifesto]: https://the-dont-be-evil-company.com/assets/badges/our-manifesto.svg
 [our-manifesto]: https://the-dont-be-evil-company.com/manifesto
 [kulala-tree-sitter]: https://github.com/dont-be-evil-company/tree-sitter-kulala-http
 [badge-vscode-market]: https://the-dont-be-evil-company.com/assets/badges/vscode-market.svg
-[vscode-market]: https://marketplace.visualstudio.com/items?itemName=dont-be-evil-company.kulala
+[vscode-market]: https://marketplace.visualstudio.com/items?itemName=dont-be-evil-company.kulala-code
 [badge-openvsx]: https://the-dont-be-evil-company.com/assets/badges/openvsx.svg
-[openvsx]: https://open-vsx.org/extension/mistweaverco/kulala
+[openvsx]: https://open-vsx.org/extension/dont-be-evil-comany/kulala
