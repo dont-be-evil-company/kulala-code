@@ -200,4 +200,4 @@ MIT
 [badge-vscode-market]: https://the-dont-be-evil-company.com/assets/badges/vscode-market.svg
 [vscode-market]: https://marketplace.visualstudio.com/items?itemName=dont-be-evil-company.kulala-code
 [badge-openvsx]: https://the-dont-be-evil-company.com/assets/badges/openvsx.svg
-[openvsx]: https://open-vsx.org/extension/dont-be-evil-comany/kulala-code
+[openvsx]: https://open-vsx.org/extension/dont-be-evil-company/kulala-code
