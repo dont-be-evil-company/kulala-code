@@ -26,7 +26,6 @@ Kulala is swahili for "rest" or "relax."
 [Kulala Formatter (and converter)][kulala-fmt] •
 [Kulala Desktop][kulala-desktop] •
 [Kulala for Neovim][kulala.nvim] •
-[Kulala Core][kulala-core]
 [Kulala Github Action][kulala-github-action]
 
 ---
@@ -59,7 +58,7 @@ Kulala is swahili for "rest" or "relax."
 
 ### Marketplace
 
-Install **Kulala** (`dont-be-evil-company.kulala`) from the VS Code Marketplace.
+Install **Kulala** (`dont-be-evil-company.kulala-code`) from the VS Code Marketplace.
 
 ### From source
 
@@ -190,7 +189,6 @@ MIT
 [kulala-fmt]: https://github.com/dont-be-evil-company/kulala-fmt
 [kulala-desktop]: https://github.com/dont-be-evil-company/kulala-desktop
 [kulala.nvim]: https://github.com/dont-be-evil-company/kulala.nvim
-[kulala-core]: https://github.com/dont-be-evil-company/kulala-core
 [kulala-github-action]: https://github.com/dont-be-evil-company/kulala-github-action
 [badge-development-status]: https://the-dont-be-evil-company.com/assets/badges/development-status.svg
 [development-status]: https://the-dont-be-evil-company.com/roadmap?filter=kulala-code
@@ -202,4 +200,4 @@ MIT
 [badge-vscode-market]: https://the-dont-be-evil-company.com/assets/badges/vscode-market.svg
 [vscode-market]: https://marketplace.visualstudio.com/items?itemName=dont-be-evil-company.kulala-code
 [badge-openvsx]: https://the-dont-be-evil-company.com/assets/badges/openvsx.svg
-[openvsx]: https://open-vsx.org/extension/dont-be-evil-comany/kulala
+[openvsx]: https://open-vsx.org/extension/dont-be-evil-comany/kulala-code
