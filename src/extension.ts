@@ -12,6 +12,14 @@ import { KulalaDiagnostics } from "./providers/diagnostics";
 import { KulalaDocumentSymbolProvider } from "./providers/documentSymbols";
 import { KulalaHoverProvider } from "./providers/hover";
 import { OpenAPIPanel } from "./openapi/panel";
+import {
+  getSessionQuery,
+  historyEntryToView,
+  historyPickItems,
+  SEARCH_DEBOUNCE_MS,
+  setSessionQuery,
+  type HistoryPickItem,
+} from "./response/history-entry";
 import { ResponsePanel } from "./response/panel";
 import { RequestRunner } from "./runner";
 import { KulalaStatusBar } from "./statusBar";
@@ -92,6 +100,54 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand("kulala.cancelRequest", () => runner.cancel()),
     vscode.commands.registerCommand("kulala.showResponse", () => responsePanel.revealLast()),
+    vscode.commands.registerCommand("kulala.searchResponses", async () => {
+      const picker = vscode.window.createQuickPick<HistoryPickItem>();
+      picker.placeholder = "Search response history (request.body:, response.body:, …)";
+      picker.matchOnDescription = false;
+      picker.value = getSessionQuery();
+      let generation = 0;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let scheduled = picker.value;
+      const run = (query: string): void => {
+        const gen = ++generation;
+        void bridge.searchResponses(query).then((result) => {
+          if (gen !== generation) return;
+          if (result.err) {
+            picker.items = [{ label: result.err, alwaysShow: true, historyId: 0 }];
+            return;
+          }
+          picker.items = historyPickItems(result.matches ?? []);
+        });
+      };
+      picker.onDidChangeValue((value) => {
+        setSessionQuery(value);
+        if (value === scheduled) return;
+        scheduled = value;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => run(value), SEARCH_DEBOUNCE_MS);
+      });
+      picker.onDidAccept(() => {
+        const item = picker.selectedItems[0];
+        if (!item?.historyId) return;
+        const historyId = item.historyId;
+        picker.hide();
+        void bridge.getHistoryEntry(historyId).then((loaded) => {
+          if (!loaded.entry) {
+            void vscode.window.showErrorMessage(loaded.err ?? "History entry not found");
+            return;
+          }
+          responsePanel.show(historyEntryToView(loaded.entry));
+        });
+      });
+      picker.onDidHide(() => {
+        setSessionQuery(picker.value);
+        generation += 1;
+        if (timer) clearTimeout(timer);
+        picker.dispose();
+      });
+      picker.show();
+      run(getSessionQuery());
+    }),
     vscode.commands.registerCommand("kulala.openOpenapiExplorer", async (atLine?: number) => {
       const editor = activeHttpEditor();
       if (!editor) return;

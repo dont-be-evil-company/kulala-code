@@ -163,8 +163,32 @@ export function formatJsonSync(value: unknown, opts?: FormatJsonOptions): string
   return formatJsonWithExe(cachedExecutable, value, opts);
 }
 
+export type HistorySearchMatch = {
+  id: number;
+  score: number;
+  label: string;
+  matchedFields: string[];
+  snippets: Array<{ field: string; text: string }>;
+};
+
+export type HistoryEntry = {
+  id: number;
+  blockName: string | null;
+  method: string;
+  url: string;
+  statusCode?: number;
+  requestHeaders?: Record<string, string>;
+  requestBodyText?: string;
+  requestScriptsText?: string;
+  responseHeaders?: Record<string, string>;
+  responseBodyText?: string;
+  responseScriptsText?: string;
+  createdAt: string;
+};
+
 export class KulalaCoreBridge {
   private active: ChildProcessWithoutNullStreams | undefined;
+  private searchChild: ChildProcessWithoutNullStreams | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -195,7 +219,11 @@ export class KulalaCoreBridge {
   private invoke(
     payload: CorePayload,
     cwd?: string,
-    hooks?: { onHttpStream?: (event: HttpStreamEvent) => void },
+    hooks?: {
+      onHttpStream?: (event: HttpStreamEvent) => void;
+      detach?: boolean;
+      onChild?: (child: ChildProcessWithoutNullStreams) => void;
+    },
   ): Promise<{ stdout: string; stderr: string; code: number }> {
     return new Promise((resolve, reject) => {
       this.executable()
@@ -206,7 +234,8 @@ export class KulalaCoreBridge {
             env: this.env(),
             stdio: ["pipe", "pipe", "pipe"],
           });
-          this.active = child;
+          if (!hooks?.detach) this.active = child;
+          hooks?.onChild?.(child);
 
           let stdout = "";
           let stderr = "";
@@ -240,13 +269,13 @@ export class KulalaCoreBridge {
 
           child.on("error", (err) => {
             if (timer) clearTimeout(timer);
-            this.active = undefined;
+            if (!hooks?.detach && this.active === child) this.active = undefined;
             reject(err);
           });
 
           child.on("close", (code) => {
             if (timer) clearTimeout(timer);
-            this.active = undefined;
+            if (!hooks?.detach && this.active === child) this.active = undefined;
             if (pending) {
               const event = parseHttpStreamLine(pending);
               if (event) hooks?.onHttpStream?.(event);
@@ -783,5 +812,58 @@ export class KulalaCoreBridge {
         child.kill("SIGTERM");
       },
     };
+  }
+
+  private killSearch(): void {
+    const child = this.searchChild;
+    this.searchChild = undefined;
+    if (!child || child.killed || child.exitCode != null) return;
+    child.kill("SIGTERM");
+  }
+
+  async searchResponses(
+    query: string,
+    opts?: { fuzzy?: boolean; limit?: number },
+  ): Promise<{ matches?: HistorySearchMatch[]; fuzzy?: boolean; err?: string }> {
+    this.killSearch();
+    const job = await this.invoke(
+      { action: "search_responses", query, fuzzy: opts?.fuzzy, limit: opts?.limit },
+      undefined,
+      {
+        detach: true,
+        onChild: (child) => {
+          this.searchChild = child;
+        },
+      },
+    );
+    const raw = job.stdout.trim();
+    if (!raw) return { err: job.stderr.trim() || "kulala-core search_responses failed" };
+    try {
+      const parsed = JSON.parse(raw) as {
+        success?: boolean;
+        fuzzy?: boolean;
+        matches?: HistorySearchMatch[];
+        error?: string;
+      };
+      if (parsed.success === false) return { err: parsed.error ?? "search failed" };
+      return { matches: parsed.matches ?? [], fuzzy: parsed.fuzzy };
+    } catch {
+      return { err: "invalid kulala-core search_responses output" };
+    }
+  }
+
+  async getHistoryEntry(id: number): Promise<{ entry?: HistoryEntry; err?: string }> {
+    const job = await this.invoke({ action: "get_history_entry", id }, undefined, { detach: true });
+    const raw = job.stdout.trim();
+    if (!raw) return { err: job.stderr.trim() || "kulala-core get_history_entry failed" };
+    try {
+      const parsed = JSON.parse(raw) as { success?: boolean; entry?: HistoryEntry; error?: string };
+      if (parsed.success === false || !parsed.entry) {
+        return { err: parsed.error ?? "History entry not found" };
+      }
+      return { entry: parsed.entry };
+    } catch {
+      return { err: "invalid kulala-core get_history_entry output" };
+    }
   }
 }
