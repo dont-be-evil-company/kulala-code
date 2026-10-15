@@ -1,7 +1,7 @@
 {
   "name": "kulala-code",
   "displayName": "Kulala for Code",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A fully-featured HTTP/GraphQL/gRPC/Websocket-client interface for (Visual Studio) Code, that supports the Jetbrains .http spec (with full scripting support).",
   "categories": [
     "Other"
@@ -219,7 +219,7 @@
         },
         "kulala.coreVersion": {
           "type": "string",
-          "default": "1.4.0",
+          "default": "1.4.1",
           "description": "kulala-core release version to download when corePath is not set."
         },
         "kulala.dataDir": {
