@@ -1,8 +1,14 @@
-## [1.0.1](https://github.com/dont-be-evil-company/kulala.vscode/compare/v1.0.0...v1.0.1) (2026-10-01)
+## [1.1.0](https://github.com/dont-be-evil-company/kulala.vscode/compare/v1.0.1...v1.1.0) (2026-10-15)
+
+### Features
+
+* global search ([8bcb6a0](https://github.com/dont-be-evil-company/kulala.vscode/commit/8bcb6a0e58d3ebb05cf6b2ff0b8facccc5c6d3b2))
 
 ### Bug Fixes
 
+* **ci:** make lint manual ([95339de](https://github.com/dont-be-evil-company/kulala.vscode/commit/95339dea367d3874469582070da5b68da0329fb6))
 * **core:** data dir ([e0414d2](https://github.com/dont-be-evil-company/kulala.vscode/commit/e0414d282664844fc3ca74bc9b0a284f20823992))
+* **docs:** link to open-vsx ([73123a9](https://github.com/dont-be-evil-company/kulala.vscode/commit/73123a96b9343a18ee2ffa74d2bc02e2cda3ca49))
 * **docs:** package name ([07c7350](https://github.com/dont-be-evil-company/kulala.vscode/commit/07c7350a69fbb22d5c1c74e828e008e21ac78d7f))
 * **package:** use "Kulala for Code" as display name ([4c46922](https://github.com/dont-be-evil-company/kulala.vscode/commit/4c4692223dccd1cb80fdf99affbd80200fc195b7))
 
