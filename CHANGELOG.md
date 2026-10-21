@@ -1,7 +1,12 @@
-## [1.1.0](https://github.com/dont-be-evil-company/kulala.vscode/compare/v1.0.1...v1.1.0) (2026-10-15)
+## [2.0.0](https://github.com/dont-be-evil-company/kulala.vscode/compare/v1.0.1...v2.0.0) (2026-10-21)
+
+### ⚠ BREAKING CHANGES
+
+* clean-up env, rm ts+lua scripting, update tree-sitter
 
 ### Features
 
+* clean-up env, rm ts+lua scripting, update tree-sitter ([26d2a1b](https://github.com/dont-be-evil-company/kulala.vscode/commit/26d2a1b97d0c1daafe601aab862ce3ec5612cb8c))
 * global search ([8bcb6a0](https://github.com/dont-be-evil-company/kulala.vscode/commit/8bcb6a0e58d3ebb05cf6b2ff0b8facccc5c6d3b2))
 
 ### Bug Fixes
@@ -11,6 +16,7 @@
 * **docs:** link to open-vsx ([73123a9](https://github.com/dont-be-evil-company/kulala.vscode/commit/73123a96b9343a18ee2ffa74d2bc02e2cda3ca49))
 * **docs:** package name ([07c7350](https://github.com/dont-be-evil-company/kulala.vscode/commit/07c7350a69fbb22d5c1c74e828e008e21ac78d7f))
 * **package:** use "Kulala for Code" as display name ([4c46922](https://github.com/dont-be-evil-company/kulala.vscode/commit/4c4692223dccd1cb80fdf99affbd80200fc195b7))
+* **scripts:** path on windows ([4f38d08](https://github.com/dont-be-evil-company/kulala.vscode/commit/4f38d08392996c2a00ae8cad0a6de819513b9cd9))
 
 ## [1.0.0](https://github.com/dont-be-evil-company/kulala.vscode/compare/v0.13.0...v1.0.0) (2026-10-01)
 
