@@ -1,11 +1,18 @@
-import type { Query, Tree } from "web-tree-sitter";
+import type { Node as SyntaxNode, Query, Tree } from "web-tree-sitter";
 import * as vscode from "vscode";
 import { isInjectedLanguage, type InjectedLanguage } from "./grammars";
+
+export type InjectionHole = {
+  startIndex: number;
+  endIndex: number;
+};
 
 export type InjectionSpan = {
   language: InjectedLanguage;
   startIndex: number;
   endIndex: number;
+  /** Byte ranges replaced with spaces before the injected parser runs. */
+  holes: InjectionHole[];
 };
 
 const SKIP_LANGUAGES = new Set(["comment"]);
@@ -30,15 +37,34 @@ export function collectInjectionSpans(tree: Tree, injectionQuery: Query): Inject
       }
 
       const { node } = capture;
+      const includeChildren = hasProperty(match.setProperties, "injection.include-children");
       spans.push({
         language: lang,
         startIndex: node.startIndex,
         endIndex: node.endIndex,
+        holes: includeChildren ? [] : namedChildHoles(node),
       });
     }
   }
 
   return dedupeSpans(spans);
+}
+
+function hasProperty(props: Record<string, string | null> | undefined, key: string): boolean {
+  return props != null && Object.prototype.hasOwnProperty.call(props, key);
+}
+
+/** Named children are omitted from the injected text, matching Neovim. */
+function namedChildHoles(node: SyntaxNode): InjectionHole[] {
+  const holes: InjectionHole[] = [];
+  for (let i = 0; i < node.namedChildCount; i++) {
+    const child = node.namedChild(i);
+    if (!child) continue;
+    if (child.startIndex < child.endIndex) {
+      holes.push({ startIndex: child.startIndex, endIndex: child.endIndex });
+    }
+  }
+  return holes;
 }
 
 function dedupeSpans(spans: InjectionSpan[]): InjectionSpan[] {

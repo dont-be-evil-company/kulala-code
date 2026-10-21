@@ -119,7 +119,13 @@ export type KulalaResponseWrapper = {
 };
 
 export type KulalaEnvironmentCatalog = {
-  $kulalaShared?: Record<string, unknown>;
+  $kulala?: {
+    defaults?: {
+      headers?: Record<string, string>;
+      curlOptions?: string[];
+    };
+    env?: Record<string, unknown>;
+  };
   environments: Record<string, Record<string, unknown>>;
 };
 
@@ -225,4 +231,4 @@ export const LspSymbolKind = {
   Function: 12,
 } as const;
 
-export type KulalaLspFiletype = "http" | "rest" | "javascript" | "typescript" | "lua";
+export type KulalaLspFiletype = "http" | "rest" | "javascript";

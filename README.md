@@ -76,14 +76,14 @@ Kulala for Visual Studio Code uses
 **kulala-core** for editor intelligence
 (not a separate language-server binary):
 
-| Feature          | `.http` / `.rest`              | `*.http.js` / `*.http.ts` / `*.http.lua` | Inside `{% %}` scripts     |
+| Feature          | `.http` / `.rest`              | `*.http.js`                              | Inside `{% %}` scripts     |
 | ---------------- | ------------------------------ | ---------------------------------------- | -------------------------- |
 | Completion       | ✓                              | ✓ (script API)                           | ✓ (script API + variables) |
 | Hover            | ✓ (resolved request / GraphQL) | ✓ (script API)                           | ✓ (script API)             |
 | Diagnostics      | ✓ (parse errors)               | -                                        | -                          |
 | Document symbols | ✓ (request names)              | -                                        | -                          |
 
-External script files must be named `something.http.ts` (etc.) when `kulala.enforceExternalScriptNamingConvention` is true (default), matching Neovim.
+External script files must be named `something.http.js` when `kulala.enforceExternalScriptNamingConvention` is true (default), matching Neovim.
 
 ## Configuration
 
@@ -98,20 +98,14 @@ External script files must be named `something.http.ts` (etc.) when `kulala.enfo
 | `kulala.enableLsp`                             | `true`               | kulala-core completion, hover, diagnostics, symbols        |
 | `kulala.enableDiagnostics`                     | `true`               | Parse diagnostics in `.http` / `.rest`                     |
 | `kulala.enableCompletion`                      | `true`               | Completion in HTTP files and `{% %}` scripts               |
-| `kulala.enforceExternalScriptNamingConvention` | `true`               | LSP on `*.http.js` / `*.http.ts` / `*.http.lua` only       |
+| `kulala.enforceExternalScriptNamingConvention` | `true`               | LSP on `*.http.js` only                                    |
 | `kulala.syntaxHighlighting`                    | `true`               | Tree-sitter semantic highlighting for `.http` / `.rest`    |
 
 ### Syntax highlighting
 
-Kulala bundles the **kulala_http** grammar from [dont-be-evil-company/tree-sitter-kulala-http](https://github.com/dont-be-evil-company/tree-sitter-kulala-http) (`syntaxes/kulala_http.wasm` + query files). **Language injections** (from upstream `queries/kulala_http/injections.scm`) re-highlight embedded content using additional grammars under `syntaxes/grammars/` (json, javascript, typescript, lua, graphql, xml).
+Kulala bundles the **kulala_http** grammar from [dont-be-evil-company/tree-sitter-kulala-http](https://github.com/dont-be-evil-company/tree-sitter-kulala-http) (`syntaxes/kulala_http.wasm` + query files). **Language injections** (from upstream `queries/kulala_http/injections.scm`) re-highlight embedded content using additional grammars under `syntaxes/grammars/` (json, javascript, graphql, xml).
 
-Inline `{% %}` scripts use short language tags on
-the opening line (same as kulala-core):
-`lang=lua`, `lang=js`, or `lang=ts` for TypeScript.
-
-Omit the tag for JavaScript.
-Use `lang=ts` (not `lang=typescript`)
-so kulala-core runs the TypeScript transpiler.
+Inline `{% %}` scripts are JavaScript. `lang=js` is optional.
 
 It uses VS Code **semantic highlighting**
 (enable with a theme that supports it, e.g., Dark+).
@@ -135,7 +129,6 @@ Optional environment variables:
 | `KULALA_HTTP_GRAMMAR_REF`     | `main`                                                        | Host grammar branch or tag                       |
 | `KULALA_HTTP_GRAMMAR_DIR`     | `.cache/tree-sitter-kulala-http`                              | Host grammar cache                               |
 | `KULALA_GRAPHQL_GRAMMAR_REPO` | `https://github.com/joowani/tree-sitter-graphql.git`          | GraphQL grammar (npm package does not ship wasm) |
-| `KULALA_LUA_GRAMMAR_REPO`     | `https://github.com/tree-sitter-grammars/tree-sitter-lua.git` | Lua wasm + highlights (must match)               |
 | `KULALA_XML_GRAMMAR_REPO`     | `https://github.com/tree-sitter-grammars/tree-sitter-xml.git` | XML grammar (build in `xml/` subdir)             |
 
 ## Example

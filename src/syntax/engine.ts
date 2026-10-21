@@ -125,7 +125,10 @@ async function tokensForInjection(
       return [];
     }
 
-    const slice = document.getText().slice(span.startIndex, span.endIndex);
+    const slice = blankInjectionHoles(
+      document.getText().slice(span.startIndex, span.endIndex),
+      span,
+    );
     if (!slice) {
       return [];
     }
@@ -138,22 +141,25 @@ async function tokensForInjection(
     }
 
     const base = document.positionAt(span.startIndex);
-    let tokens = nodeToTokens(tree, grammar.highlightQuery, base);
-
-    // tree-sitter-typescript highlights.scm only covers TS-specific nodes; layer JS like nvim-treesitter.
-    if (span.language === "typescript") {
-      const jsGrammar = await loadInjectedGrammar(context, "javascript");
-      if (jsGrammar) {
-        tokens = tokens.concat(nodeToTokens(tree, jsGrammar.highlightQuery, base));
-      }
-    }
-
-    return tokens;
+    return nodeToTokens(tree, grammar.highlightQuery, base);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`Kulala: ${span.language} injection highlighting failed: ${msg}`);
     return [];
   }
+}
+
+function blankInjectionHoles(slice: string, span: InjectionSpan): string {
+  if (span.holes.length === 0) return slice;
+  let text = slice;
+  const holes = [...span.holes].sort((a, b) => b.startIndex - a.startIndex);
+  for (const hole of holes) {
+    const start = hole.startIndex - span.startIndex;
+    const end = hole.endIndex - span.startIndex;
+    if (start < 0 || end > text.length || start >= end) continue;
+    text = text.slice(0, start) + " ".repeat(end - start) + text.slice(end);
+  }
+  return text;
 }
 
 function comparePositions(a: vscode.Position, b: vscode.Position): number {

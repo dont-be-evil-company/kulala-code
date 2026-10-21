@@ -117,7 +117,7 @@ echo "Bundling injection grammars into $GRAMMARS"
 TMP_HIGHLIGHTS="$ROOT/.cache/syntax-highlights"
 mkdir -p "$TMP_HIGHLIGHTS"
 
-# json, javascript, typescript - prebuilt wasm in npm packages
+# json, javascript - prebuilt wasm in npm packages
 install_grammar json \
   "$NODE_MODULES/tree-sitter-json/tree-sitter-json.wasm" \
   "$NODE_MODULES/tree-sitter-json/queries/highlights.scm"
@@ -125,21 +125,6 @@ install_grammar json \
 install_grammar javascript \
   "$NODE_MODULES/tree-sitter-javascript/tree-sitter-javascript.wasm" \
   "$NODE_MODULES/tree-sitter-javascript/queries/highlights.scm"
-
-install_grammar typescript \
-  "$NODE_MODULES/tree-sitter-typescript/tree-sitter-typescript.wasm" \
-  "$NODE_MODULES/tree-sitter-typescript/queries/highlights.scm"
-
-# lua - wasm + queries must come from the same repo (npm wasm ≠ grammars highlights)
-LUA_CACHE="${KULALA_LUA_GRAMMAR_DIR:-$ROOT/.cache/tree-sitter-lua-grammars}"
-LUA_REPO="${KULALA_LUA_GRAMMAR_REPO:-https://github.com/tree-sitter-grammars/tree-sitter-lua.git}"
-LUA_REF="${KULALA_LUA_GRAMMAR_REF:-main}"
-sync_repo "$LUA_REPO" "$LUA_REF" "$LUA_CACHE"
-echo "Building lua grammar.wasm"
-(cd "$LUA_CACHE" && tree-sitter build --wasm)
-install_grammar lua \
-  "$LUA_CACHE/tree-sitter-lua.wasm" \
-  "$LUA_CACHE/queries/highlights.scm"
 
 # graphql - build wasm from git; highlights from nvim-treesitter
 GRAPHQL_CACHE="${KULALA_GRAPHQL_GRAMMAR_DIR:-$ROOT/.cache/tree-sitter-graphql}"

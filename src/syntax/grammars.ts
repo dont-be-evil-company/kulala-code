@@ -3,14 +3,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { Language, Query } from "web-tree-sitter";
 
-export const INJECTED_LANGUAGES = [
-  "json",
-  "javascript",
-  "typescript",
-  "lua",
-  "graphql",
-  "xml",
-] as const;
+export const INJECTED_LANGUAGES = ["json", "javascript", "graphql", "xml"] as const;
 
 export type InjectedLanguage = (typeof INJECTED_LANGUAGES)[number];
 

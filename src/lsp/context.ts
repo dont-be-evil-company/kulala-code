@@ -7,7 +7,7 @@ import type { KulalaLspFiletype } from "../core/types";
 export type { KulalaLspFiletype };
 
 /** kulala-core `LspSupportedExternalScriptFiletypes` */
-export const KULALA_SCRIPT_LANGS = ["javascript", "typescript", "lua"] as const;
+export const KULALA_SCRIPT_LANGS = ["javascript"] as const;
 
 export type KulalaLspContext = {
   content: string;
@@ -25,7 +25,7 @@ export function isHttpDocument(doc: vscode.TextDocument): boolean {
   return doc.languageId === "http" || doc.languageId === "rest";
 }
 
-/** External script file linked to an .http collection (`api.http.ts`, etc.). */
+/** External script file linked to an .http collection (`api.http.js`). */
 export function isHttpScriptFile(doc: vscode.TextDocument): boolean {
   if (!(KULALA_SCRIPT_LANGS as readonly string[]).includes(doc.languageId)) {
     return false;
@@ -35,7 +35,7 @@ export function isHttpScriptFile(doc: vscode.TextDocument): boolean {
     return true;
   }
   const name = doc.uri.scheme === "file" ? path.basename(doc.uri.fsPath) : doc.fileName;
-  return /\.http\.(js|ts|lua)$/i.test(name);
+  return /\.http\.js$/i.test(name);
 }
 
 /** Documents that receive kulala-core completion, hover, and (for .http) diagnostics. */
