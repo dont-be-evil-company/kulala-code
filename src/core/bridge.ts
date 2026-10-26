@@ -1,9 +1,6 @@
-import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
 import * as vscode from "vscode";
 import { effectiveDataDir, timeoutMs } from "../config";
+import { createDaemonClient, type DaemonClient } from "./daemon-client";
 import { ensureCoreInstalled } from "./installer";
 import type {
   KulalaDocument,
@@ -127,12 +124,10 @@ export type FormatJsonOptions = {
 };
 
 let cachedExecutable: string | undefined;
+let jsonClient: DaemonClient | undefined;
+let jsonClientExe: string | undefined;
 
-function formatJsonWithExe(
-  exe: string,
-  value: unknown,
-  opts?: FormatJsonOptions,
-): string | undefined {
+function formatJsonPayload(value: unknown, opts?: FormatJsonOptions): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     action: "format_json",
     indent: opts?.indent,
@@ -141,13 +136,28 @@ function formatJsonWithExe(
   };
   if (opts?.text !== undefined) payload.text = opts.text;
   else payload.value = value;
+  return payload;
+}
 
-  const result = spawnSync(exe, [], {
-    input: `${JSON.stringify(payload)}\n`,
-    encoding: "utf8",
-    env: { ...process.env, KULALA_CORE_DATA_DIR: effectiveDataDir() },
-  });
-  if (result.status !== 0 || !result.stdout) return undefined;
+function jsonDaemon(): DaemonClient | undefined {
+  if (!cachedExecutable) return undefined;
+  if (!jsonClient || jsonClientExe !== cachedExecutable) {
+    const exe = cachedExecutable;
+    jsonClientExe = exe;
+    jsonClient = createDaemonClient({
+      clientName: "kulala-code",
+      dataDir: () => effectiveDataDir(),
+      executable: () => exe,
+    });
+  }
+  return jsonClient;
+}
+
+function formatJsonWithDaemon(value: unknown, opts?: FormatJsonOptions): string | undefined {
+  const daemon = jsonDaemon();
+  if (!daemon) return undefined;
+  const result = daemon.invokeSync(formatJsonPayload(value, opts));
+  if (result.code !== 0 || !result.stdout) return undefined;
   try {
     const parsed = JSON.parse(result.stdout) as { success?: boolean; content?: string };
     if (parsed.success === true && typeof parsed.content === "string") return parsed.content;
@@ -159,8 +169,7 @@ function formatJsonWithExe(
 
 /** Pretty-print JSON with the cached kulala-core binary. */
 export function formatJsonSync(value: unknown, opts?: FormatJsonOptions): string | undefined {
-  if (!cachedExecutable) return undefined;
-  return formatJsonWithExe(cachedExecutable, value, opts);
+  return formatJsonWithDaemon(value, opts);
 }
 
 export type HistorySearchMatch = {
@@ -187,10 +196,20 @@ export type HistoryEntry = {
 };
 
 export class KulalaCoreBridge {
-  private active: ChildProcessWithoutNullStreams | undefined;
-  private searchChild: ChildProcessWithoutNullStreams | undefined;
+  private daemonClient: DaemonClient | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
+
+  private daemon(): DaemonClient {
+    if (!this.daemonClient) {
+      this.daemonClient = createDaemonClient({
+        clientName: "kulala-code",
+        dataDir: () => effectiveDataDir(),
+        executable: () => this.executable(),
+      });
+    }
+    return this.daemonClient;
+  }
 
   async executable(): Promise<string> {
     const exe = await ensureCoreInstalled(this.context);
@@ -199,21 +218,20 @@ export class KulalaCoreBridge {
   }
 
   async formatJson(value: unknown, opts?: FormatJsonOptions): Promise<string | undefined> {
-    const exe = await this.executable();
-    return formatJsonWithExe(exe, value, opts);
+    await this.executable();
+    const result = await this.daemon().invoke(formatJsonPayload(value, opts), { track: "none" });
+    if (result.code !== 0 || !result.stdout) return undefined;
+    try {
+      const parsed = JSON.parse(result.stdout) as { success?: boolean; content?: string };
+      if (parsed.success === true && typeof parsed.content === "string") return parsed.content;
+    } catch {
+      return undefined;
+    }
+    return undefined;
   }
 
   cancelActive(): boolean {
-    if (!this.active) {
-      return false;
-    }
-    this.active.kill("SIGTERM");
-    this.active = undefined;
-    return true;
-  }
-
-  private env(): NodeJS.ProcessEnv {
-    return { ...process.env, KULALA_CORE_DATA_DIR: effectiveDataDir() };
+    return this.daemon().cancelActive();
   }
 
   private invoke(
@@ -222,76 +240,25 @@ export class KulalaCoreBridge {
     hooks?: {
       onHttpStream?: (event: HttpStreamEvent) => void;
       detach?: boolean;
-      onChild?: (child: ChildProcessWithoutNullStreams) => void;
+      track?: "active" | "search" | "none";
     },
   ): Promise<{ stdout: string; stderr: string; code: number }> {
-    return new Promise((resolve, reject) => {
-      this.executable()
-        .then((exe) => {
-          const timeout = contentRequestsKeepAlive(payload) ? 0 : timeoutMs();
-          const child = spawn(exe, [], {
-            cwd: cwd && cwd.length > 0 ? cwd : undefined,
-            env: this.env(),
-            stdio: ["pipe", "pipe", "pipe"],
-          });
-          if (!hooks?.detach) this.active = child;
-          hooks?.onChild?.(child);
-
-          let stdout = "";
-          let stderr = "";
-          let pending = "";
-          child.stdout.setEncoding("utf8");
-          child.stderr.setEncoding("utf8");
-          const takeLine = (line: string): void => {
-            const event = parseHttpStreamLine(line);
-            if (event) {
-              hooks?.onHttpStream?.(event);
-              return;
-            }
-            stdout += `${line}\n`;
-          };
-          child.stdout.on("data", (c: string) => {
-            pending += c;
-            const lines = pending.split("\n");
-            pending = lines.pop() ?? "";
-            for (const line of lines) takeLine(line);
-          });
-          child.stderr.on("data", (c) => {
-            stderr += c;
-          });
-
-          const timer =
-            timeout > 0
-              ? setTimeout(() => {
-                  child.kill("SIGTERM");
-                }, timeout)
-              : undefined;
-
-          child.on("error", (err) => {
-            if (timer) clearTimeout(timer);
-            if (!hooks?.detach && this.active === child) this.active = undefined;
-            reject(err);
-          });
-
-          child.on("close", (code) => {
-            if (timer) clearTimeout(timer);
-            if (!hooks?.detach && this.active === child) this.active = undefined;
-            if (pending) {
-              const event = parseHttpStreamLine(pending);
-              if (event) hooks?.onHttpStream?.(event);
-              else stdout += pending;
-            }
-            resolve({ stdout, stderr, code: code ?? 1 });
-          });
-
-          child.stdin.write(`${JSON.stringify(payload)}\n`);
-          child.stdin.end();
-        })
-        .catch((error: unknown) => {
-          const msg = error instanceof Error ? error.message : String(error);
-          resolve({ stdout: "", stderr: msg, code: 1 });
-        });
-    });
+    const timeout = contentRequestsKeepAlive(payload) ? 0 : timeoutMs();
+    const track = hooks?.track ?? (hooks?.detach ? "none" : "active");
+    return this.executable()
+      .then(() =>
+        this.daemon().invoke(payload, {
+          cwd,
+          onHttpStream: hooks?.onHttpStream,
+          timeoutMs: timeout,
+          track,
+        }),
+      )
+      .then((result) => ({ stdout: result.stdout, stderr: result.stderr, code: result.code }))
+      .catch((error: unknown) => {
+        const msg = error instanceof Error ? error.message : String(error);
+        return { stdout: "", stderr: msg, code: 1 };
+      });
   }
 
   static tryDecodeWrapper(stdout: string): KulalaResponseWrapper | undefined {
@@ -723,118 +690,30 @@ export class KulalaCoreBridge {
     },
     cwd?: string,
   ): Promise<WebSocketSessionHandle | undefined> {
-    let exe: string;
     try {
-      exe = await this.executable();
+      await this.executable();
     } catch {
       return undefined;
     }
-    const tmp = path.join(
-      os.tmpdir(),
-      `kulala-ws-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    const handle = await this.daemon().openWebSocket(
+      connect,
+      {
+        onEvent: (event) => handlers.onEvent(event as WebSocketEvent),
+        onExit: handlers.onExit,
+      },
+      cwd,
     );
-    fs.writeFileSync(tmp, JSON.stringify(connect), "utf8");
-
-    const child = spawn(exe, ["--websocket", "-i", tmp], {
-      cwd: cwd && cwd.length > 0 ? cwd : undefined,
-      env: this.env(),
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-
-    let stdoutBuf = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-
-    const flushLines = (chunk: string) => {
-      stdoutBuf += chunk;
-      let nl: number;
-      while ((nl = stdoutBuf.indexOf("\n")) >= 0) {
-        const line = stdoutBuf.slice(0, nl).trim();
-        stdoutBuf = stdoutBuf.slice(nl + 1);
-        if (!line) continue;
-        try {
-          const msg = JSON.parse(line) as {
-            type?: string;
-            data?: string;
-            error?: string;
-            code?: number;
-            remaining?: number;
-          };
-          if (msg.type === "ready") handlers.onEvent({ type: "ready" });
-          else if (msg.type === "message" && msg.data != null) {
-            handlers.onEvent({ type: "message", data: msg.data });
-          } else if (msg.type === "sent" && msg.data != null) {
-            handlers.onEvent({ type: "sent", data: msg.data });
-          } else if (msg.type === "waiting") {
-            handlers.onEvent({
-              type: "waiting",
-              remaining: typeof msg.remaining === "number" ? msg.remaining : 0,
-            });
-          } else if (msg.type === "script-done") {
-            handlers.onEvent({ type: "script-done" });
-          } else if (msg.type === "error") {
-            handlers.onEvent({ type: "error", error: msg.error ?? "WebSocket error" });
-          } else if (msg.type === "closed") {
-            handlers.onEvent({ type: "closed", code: msg.code });
-          }
-        } catch {
-          /* ignore malformed lines */
-        }
-      }
-    };
-
-    child.stdout.on("data", flushLines);
-    child.stderr.on("data", (c: string) => {
-      const text = summarizeCoreStderr(c);
-      if (text) handlers.onEvent({ type: "error", error: text });
-    });
-
-    child.on("close", (code) => {
-      try {
-        fs.unlinkSync(tmp);
-      } catch {
-        /* ignore */
-      }
-      handlers.onExit?.(code);
-    });
-
-    return {
-      pid: child.pid,
-      send(data: string) {
-        if (!child.stdin.writable) return;
-        child.stdin.write(`${JSON.stringify({ op: "send", data })}\n`);
-      },
-      close() {
-        if (!child.stdin.writable) return;
-        child.stdin.write(`${JSON.stringify({ op: "close" })}\n`);
-      },
-      kill() {
-        child.kill("SIGTERM");
-      },
-    };
-  }
-
-  private killSearch(): void {
-    const child = this.searchChild;
-    this.searchChild = undefined;
-    if (!child || child.killed || child.exitCode != null) return;
-    child.kill("SIGTERM");
+    return handle;
   }
 
   async searchResponses(
     query: string,
     opts?: { fuzzy?: boolean; limit?: number },
   ): Promise<{ matches?: HistorySearchMatch[]; fuzzy?: boolean; err?: string }> {
-    this.killSearch();
     const job = await this.invoke(
       { action: "search_responses", query, fuzzy: opts?.fuzzy, limit: opts?.limit },
       undefined,
-      {
-        detach: true,
-        onChild: (child) => {
-          this.searchChild = child;
-        },
-      },
+      { track: "search" },
     );
     const raw = job.stdout.trim();
     if (!raw) return { err: job.stderr.trim() || "kulala-core search_responses failed" };
