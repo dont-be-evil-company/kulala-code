@@ -112,8 +112,7 @@ export function formatBodyDisplay(body: KulalaResponseBody | undefined): BodyDis
     return { kind: "text", text: "" };
   }
   if (body.type === "json") {
-    const text =
-      body.formatted ?? formatJsonSync(body.content) ?? JSON.stringify(body.content);
+    const text = body.formatted ?? formatJsonSync(body.content) ?? JSON.stringify(body.content);
     return { kind: "json", text };
   }
   if (body.type === "binary") {

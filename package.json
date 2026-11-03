@@ -1,7 +1,7 @@
 {
   "name": "kulala-code",
   "displayName": "Kulala for Code",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "A fully-featured HTTP/GraphQL/gRPC/Websocket-client interface for (Visual Studio) Code, that supports the Jetbrains .http spec (with full scripting support).",
   "categories": [
     "Other"
@@ -110,6 +110,10 @@
         "title": "Kulala: Search Responses"
       },
       {
+        "command": "kulala.openGraphqlExplorer",
+        "title": "Kulala: Open GraphQL Explorer"
+      },
+      {
         "command": "kulala.openOpenapiExplorer",
         "title": "Kulala: Open OpenAPI Explorer"
       },
@@ -178,6 +182,11 @@
           "command": "kulala.copyAsCurl",
           "when": "editorLangId == http || editorLangId == rest",
           "group": "kulala@2"
+        },
+        {
+          "command": "kulala.openGraphqlExplorer",
+          "when": "editorLangId == http || editorLangId == rest",
+          "group": "kulala@3"
         },
         {
           "command": "kulala.openOpenapiExplorer",

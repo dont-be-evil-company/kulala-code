@@ -80,7 +80,10 @@ export function historyEntryToView(entry: HistoryEntry): ResponseViewState {
     testGroups: [],
     verbose: {
       requestHeadersRows: requestHeaders,
-      requestBody: { body: entry.requestBodyText ?? "", bodyKind: bodyKind(entry.requestBodyText ?? "") },
+      requestBody: {
+        body: entry.requestBodyText ?? "",
+        bodyKind: bodyKind(entry.requestBodyText ?? ""),
+      },
       responseHeadersRows: headers,
       responseBody: { body, bodyKind: kind },
     },

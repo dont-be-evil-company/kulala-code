@@ -3,6 +3,7 @@ import type { HttpStreamEvent, KulalaCoreBridge } from "./core/bridge";
 import type { KulalaRequestResult, KulalaRunLimit } from "./core/types";
 import { getSelectedEnv, responseViewColumnAfterOpenapi } from "./config";
 import type { DocumentContext } from "./document";
+import { GraphQLPanel } from "./graphql/panel";
 import { OpenAPIPanel } from "./openapi/panel";
 import { formatBodyDisplay } from "./response/body";
 import { ResponsePanel } from "./response/panel";
@@ -75,6 +76,7 @@ export class RequestRunner {
     private readonly context: vscode.ExtensionContext,
     private readonly panel: ResponsePanel,
     private readonly openapiPanel: OpenAPIPanel,
+    private readonly graphqlPanel: GraphQLPanel,
   ) {
     this.panel.setHandlers({
       onApplyJqFilter: (filter, entryId) => {
@@ -95,6 +97,11 @@ export class RequestRunner {
       },
       onCopyAsHttp: (operationKey, parameterOverrides) => {
         void this.copyOpenApiAsHttp(operationKey, parameterOverrides);
+      },
+    });
+    this.graphqlPanel.setHandlers({
+      onRun: () => {
+        void this.runGraphQLQuery();
       },
     });
   }
@@ -275,7 +282,9 @@ export class RequestRunner {
   }
 
   private responseColumnAfterOpenapi(): vscode.ViewColumn | undefined {
-    return this.openapiPanel.isOpen() ? responseViewColumnAfterOpenapi() : undefined;
+    return this.openapiPanel.isOpen() || this.graphqlPanel.isOpen()
+      ? responseViewColumnAfterOpenapi()
+      : undefined;
   }
 
   private showResponse(
@@ -297,6 +306,14 @@ export class RequestRunner {
         : undefined;
       const env = getSelectedEnv(this.context, folder ?? undefined);
       this.openapiPanel.show(item.openapi, { ...ctx, env });
+      return;
+    }
+    if (item.graphqlUi && item.graphql) {
+      const folder = ctx.filepath
+        ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(ctx.filepath))
+        : undefined;
+      const env = getSelectedEnv(this.context, folder ?? undefined);
+      this.graphqlPanel.show(item.graphql, { ...ctx, env });
       return;
     }
     if (item.protocol === "websocket") {
@@ -342,6 +359,62 @@ export class RequestRunner {
         status: "Error",
         statusBadgeClass: "kulala-badge-error",
       });
+    }
+  }
+
+  async openGraphqlExplorer(ctx: DocumentContext): Promise<void> {
+    this.lastCtx = ctx;
+    const folder = ctx.filepath
+      ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(ctx.filepath))
+      : undefined;
+    const env = getSelectedEnv(this.context, folder ?? undefined);
+    const { result, err } = await this.bridge.graphqlExplorerLoad({
+      content: ctx.content,
+      filepath: ctx.filepath,
+      line: ctx.line,
+      column: ctx.column,
+      env,
+      cwd: ctx.cwd,
+    });
+    if (!result?.ok) {
+      void vscode.window.showErrorMessage(
+        (!result ? err : result.error) ?? "Failed to load GraphQL explorer.",
+      );
+      return;
+    }
+    this.graphqlPanel.show(result.graphql, { ...ctx, env });
+  }
+
+  async runGraphQLQuery(): Promise<void> {
+    const parent = this.graphqlPanel.getParentContext();
+    if (!parent) {
+      void vscode.window.showWarningMessage("No GraphQL parent request context.");
+      return;
+    }
+    if (this.running) {
+      void vscode.window.showWarningMessage("A Kulala request is already running.");
+      return;
+    }
+    this.running = true;
+    this.lastCtx = parent;
+    await vscode.commands.executeCommand("setContext", "kulala.requestRunning", true);
+    try {
+      const { result, err } = await this.bridge.graphqlExplorerRun({
+        content: parent.content,
+        filepath: parent.filepath,
+        line: parent.line,
+        column: parent.column,
+        env: parent.env,
+        cwd: parent.cwd,
+      });
+      if (!result) {
+        this.showResponse(ResponsePanel.fromBridgeError(err ?? "GraphQL query failed"), true);
+        return;
+      }
+      await this.deliverItem(result, parent, { afterOpenapi: true });
+    } finally {
+      this.running = false;
+      await vscode.commands.executeCommand("setContext", "kulala.requestRunning", false);
     }
   }
 

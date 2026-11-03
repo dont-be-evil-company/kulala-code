@@ -7,6 +7,20 @@ import { codeLensLine0 } from "../requestLine";
 
 type ParsedBlock = KulalaDocument["blocks"][number];
 
+function blockHasOperator(
+  document: vscode.TextDocument,
+  block: ParsedBlock,
+  operator: string,
+): boolean {
+  const start0 = Math.max(0, (block.position?.start ?? 1) - 1);
+  const end0 = Math.min(document.lineCount, block.position?.end ?? start0 + 1);
+  const pattern = new RegExp(`@${operator}\\b`);
+  for (let line = start0; line < end0; line++) {
+    if (pattern.test(document.lineAt(line).text)) return true;
+  }
+  return false;
+}
+
 function blockHasOpenapiOperator(document: vscode.TextDocument, block: ParsedBlock): boolean {
   const start0 = Math.max(0, (block.position?.start ?? 1) - 1);
   const end0 = Math.min(document.lineCount, block.position?.end ?? start0 + 1);
@@ -39,15 +53,21 @@ export class KulalaCodeLensProvider implements vscode.CodeLensProvider {
           continue;
         }
         const range = new vscode.Range(line, 0, line, 0);
+        const isGraphql = blockHasOperator(document, block, "kulala-graphql-explorer");
         const isOpenapi = blockHasOpenapiOperator(document, block);
+        const explorer = isGraphql
+          ? { title: "$(play) Open GraphQL explorer", command: "kulala.openGraphqlExplorer" }
+          : isOpenapi
+            ? { title: "$(play) Open OpenAPI explorer", command: "kulala.openOpenapiExplorer" }
+            : undefined;
         lenses.push(
           new vscode.CodeLens(range, {
-            title: isOpenapi ? "$(play) Open OpenAPI explorer" : "$(play) Send Request",
-            command: isOpenapi ? "kulala.openOpenapiExplorer" : "kulala.sendRequest",
+            title: explorer?.title ?? "$(play) Send Request",
+            command: explorer?.command ?? "kulala.sendRequest",
             arguments: [line],
           }),
         );
-        if (isOpenapi) {
+        if (explorer) {
           lenses.push(
             new vscode.CodeLens(range, {
               title: "$(play) Send Request",

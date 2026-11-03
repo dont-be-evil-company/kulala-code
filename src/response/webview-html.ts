@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as vscode from "vscode";
+import type { GraphQLViewState } from "../../shared/graphql-view";
 import type { OpenAPIViewState } from "../../shared/openapi-view";
 import type { WebviewPayload } from "../../shared/response-view";
 
@@ -101,6 +102,27 @@ export function postWebviewState(webview: vscode.Webview, payload: WebviewPayloa
   void webview.postMessage({ type: "state", payload });
 }
 
+export function renderGraphqlWebview(
+  extensionUri: vscode.Uri,
+  webview: vscode.Webview,
+  payload: GraphQLViewState,
+): string {
+  const base = webviewDistUri(extensionUri);
+  const html = loadIndexHtml(extensionUri, webview);
+  const json = JSON.stringify(payload).replace(/</g, "\\u003c");
+  return injectHeadExtras(html, {
+    routeHash: "#/graphql",
+    injectScript: `<script>window.__KULALA_GRAPHQL__=${json};</script>`,
+    webview,
+    base,
+    cspSource: webview.cspSource,
+  });
+}
+
 export function postOpenapiState(webview: vscode.Webview, payload: OpenAPIViewState): void {
   void webview.postMessage({ type: "openapiState", payload });
+}
+
+export function postGraphqlState(webview: vscode.Webview, payload: GraphQLViewState): void {
+  void webview.postMessage({ type: "graphqlState", payload });
 }

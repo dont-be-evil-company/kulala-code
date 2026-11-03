@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import type { GraphQLExplorerEdit } from "../../shared/graphql-view";
 import { effectiveDataDir, timeoutMs } from "../config";
 import { createDaemonClient, type DaemonClient } from "./daemon-client";
 import { ensureCoreInstalled } from "./installer";
@@ -10,6 +11,8 @@ import type {
   KulalaRunLimit,
   KulalaLspFiletype,
   ClearOpenAPISchemaResult,
+  GraphQLExplorerPatchResult,
+  GraphQLExplorerPayload,
   OpenAPILoadResult,
   OpenAPIToHttpResult,
   KulalaRequestResult,
@@ -649,6 +652,177 @@ export class KulalaCoreBridge {
       return { result: { cleared: parsed.cleared ?? 0, keys: parsed.keys } };
     } catch {
       return { err: "invalid kulala-core clear_openapi_schema output" };
+    }
+  }
+
+  async graphqlExplorerLoad(opts: {
+    content: string;
+    filepath?: string;
+    line: number;
+    column: number;
+    env?: string;
+    cwd?: string;
+  }): Promise<{
+    result?: { ok: true; graphql: GraphQLExplorerPayload } | { ok: false; error: string };
+    err?: string;
+  }> {
+    const job = await this.invoke(
+      {
+        action: "graphql_explorer_load",
+        content: opts.content,
+        filepath: opts.filepath,
+        line: opts.line,
+        column: opts.column,
+        env: opts.env ?? "default",
+      },
+      opts.cwd,
+    );
+    const raw = job.stdout.trim();
+    if (!raw) {
+      return { err: job.stderr.trim() || "kulala-core graphql_explorer_load failed" };
+    }
+    try {
+      const result = JSON.parse(raw) as {
+        ok?: boolean;
+        graphql?: GraphQLExplorerPayload;
+        error?: string;
+      };
+      if (result.ok === true && result.graphql)
+        return { result: { ok: true, graphql: result.graphql } };
+      if (result.ok === false)
+        return { result: { ok: false, error: result.error ?? "GraphQL explorer load failed" } };
+      return { err: "invalid kulala-core graphql_explorer_load output" };
+    } catch {
+      return { err: "invalid kulala-core graphql_explorer_load output" };
+    }
+  }
+
+  async graphqlExplorerPatch(opts: {
+    content: string;
+    filepath?: string;
+    line: number;
+    column: number;
+    env?: string;
+    cwd?: string;
+    edit: GraphQLExplorerEdit;
+  }): Promise<{ result?: GraphQLExplorerPatchResult; err?: string }> {
+    const job = await this.invoke(
+      {
+        action: "graphql_explorer_patch",
+        content: opts.content,
+        filepath: opts.filepath,
+        line: opts.line,
+        column: opts.column,
+        env: opts.env ?? "default",
+        edit: opts.edit,
+      },
+      opts.cwd,
+    );
+    const raw = job.stdout.trim();
+    if (!raw) {
+      return { err: job.stderr.trim() || "kulala-core graphql_explorer_patch failed" };
+    }
+    try {
+      const result = JSON.parse(raw) as GraphQLExplorerPatchResult;
+      if (result.ok === true || result.ok === false) return { result };
+      return { err: "invalid kulala-core graphql_explorer_patch output" };
+    } catch {
+      return { err: "invalid kulala-core graphql_explorer_patch output" };
+    }
+  }
+
+  async graphqlExplorerRun(opts: {
+    content: string;
+    filepath?: string;
+    line: number;
+    column: number;
+    env?: string;
+    cwd?: string;
+  }): Promise<{ result?: KulalaRequestResult; err?: string }> {
+    const job = await this.invoke(
+      {
+        action: "graphql_explorer_run",
+        content: opts.content,
+        filepath: opts.filepath,
+        line: opts.line,
+        column: opts.column,
+        env: opts.env ?? "default",
+      },
+      opts.cwd,
+    );
+    const raw = job.stdout.trim();
+    if (!raw) {
+      return { err: job.stderr.trim() || "kulala-core graphql_explorer_run failed" };
+    }
+    try {
+      const parsed = JSON.parse(raw) as KulalaRequestResult;
+      if ("success" in parsed || "error" in parsed) return { result: parsed };
+      return { err: "invalid kulala-core graphql_explorer_run output" };
+    } catch {
+      return { err: "invalid kulala-core graphql_explorer_run output" };
+    }
+  }
+
+  async graphqlExplorerToHttp(opts: {
+    content: string;
+    filepath?: string;
+    line: number;
+    column: number;
+    cwd?: string;
+  }): Promise<{
+    result?: { ok: true; content: string } | { ok: false; error: string };
+    err?: string;
+  }> {
+    const job = await this.invoke(
+      {
+        action: "graphql_explorer_to_http",
+        content: opts.content,
+        filepath: opts.filepath,
+        line: opts.line,
+        column: opts.column,
+      },
+      opts.cwd,
+    );
+    const raw = job.stdout.trim();
+    if (!raw) {
+      return { err: job.stderr.trim() || "kulala-core graphql_explorer_to_http failed" };
+    }
+    try {
+      const result = JSON.parse(raw) as { ok?: boolean; content?: string; error?: string };
+      if (result.ok === true && typeof result.content === "string") {
+        return { result: { ok: true, content: result.content } };
+      }
+      if (result.ok === false)
+        return { result: { ok: false, error: result.error ?? "Failed to copy GraphQL request" } };
+      return { err: "invalid kulala-core graphql_explorer_to_http output" };
+    } catch {
+      return { err: "invalid kulala-core graphql_explorer_to_http output" };
+    }
+  }
+
+  async clearGraphqlSchema(
+    host?: string,
+    cwd?: string,
+  ): Promise<{ result?: { cleared: number }; err?: string }> {
+    const job = await this.invoke(
+      {
+        action: "clear_graphql_schema",
+        ...(host ? { host } : {}),
+      },
+      cwd,
+    );
+    const raw = job.stdout.trim();
+    if (!raw) {
+      return { err: job.stderr.trim() || "kulala-core clear_graphql_schema failed" };
+    }
+    try {
+      const parsed = JSON.parse(raw) as { success?: boolean; cleared?: number; error?: string };
+      if (parsed.success === false || parsed.error) {
+        return { err: parsed.error ?? "clear_graphql_schema failed" };
+      }
+      return { result: { cleared: parsed.cleared ?? 0 } };
+    } catch {
+      return { err: "invalid kulala-core clear_graphql_schema output" };
     }
   }
 

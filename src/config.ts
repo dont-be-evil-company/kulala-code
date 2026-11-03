@@ -25,10 +25,7 @@ export function defaultEnv(): string {
 }
 
 export function downloadUrlTemplate(): string {
-  return getConfig().get<string>(
-    "downloadUrl",
-    "https://core.kulala.app/releases/%s/%s",
-  );
+  return getConfig().get<string>("downloadUrl", "https://core.kulala.app/releases/%s/%s");
 }
 
 /** Matches kulala-core `getKulalaCoreDataDir`. */
@@ -72,6 +69,11 @@ export function responseViewColumn(): vscode.ViewColumn {
 
 /** First editor column beside the HTTP file (OpenAPI explorer). */
 export function openapiViewColumn(): vscode.ViewColumn {
+  return vscode.ViewColumn.Beside;
+}
+
+/** First editor column beside the HTTP file (GraphQL explorer). */
+export function graphqlViewColumn(): vscode.ViewColumn {
   return vscode.ViewColumn.Beside;
 }
 

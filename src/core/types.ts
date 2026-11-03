@@ -1,3 +1,9 @@
+import type {
+  GraphQLBodyRange,
+  GraphQLExplorerSchema,
+  GraphQLOperationKind,
+} from "../../shared/graphql-view";
+
 export type KulalaRunLimit =
   | { filter: "cursorPosition"; line: number; column: number }
   | { filter: "name"; name: string };
@@ -67,6 +73,9 @@ export type KulalaRequestResult = {
   /** Open OpenAPI explorer instead of the standard response panel. */
   openapiUi?: true;
   openapi?: OpenAPIUiPayload;
+  /** Open the GraphQL explorer instead of executing the query. */
+  graphqlUi?: true;
+  graphql?: GraphQLExplorerPayload;
 };
 
 export type OpenAPIUITreeNodeKind =
@@ -101,6 +110,40 @@ export type OpenAPIUiPayload = {
   title?: string;
   version?: string;
 };
+
+export type GraphQLExplorerPayload = {
+  cacheKey: string;
+  fromCache: boolean;
+  endpoint: string;
+  schema: GraphQLExplorerSchema;
+  operation: GraphQLOperationKind;
+  query: string;
+  variables?: string;
+  body: string;
+  patchable: boolean;
+  rewritten?: boolean;
+  reason?: string;
+  checkedFields: string[];
+  checkedArgs: string[];
+  argValues: Record<string, string>;
+  bodyRange?: GraphQLBodyRange;
+};
+
+export type GraphQLExplorerPatchResult =
+  | {
+      ok: true;
+      patchable: boolean;
+      reason?: string;
+      operation: GraphQLOperationKind;
+      query: string;
+      variables?: string;
+      body: string;
+      bodyRange?: GraphQLBodyRange;
+      checkedFields: string[];
+      checkedArgs: string[];
+      argValues: Record<string, string>;
+    }
+  | { ok: false; error: string };
 
 export type OpenAPILoadResult =
   | { ok: true; openapi: OpenAPIUiPayload }

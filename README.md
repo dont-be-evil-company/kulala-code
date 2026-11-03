@@ -38,6 +38,7 @@ Kulala is swahili for "rest" or "relax."
 - **Send all** requests in the file (`Ctrl+Alt+A` / `Cmd+Alt+A`)
 - **Response panel** with Body (read-only Monaco, language-aware), Headers, timings, tests, and script console
 - **OpenAPI explorer** for `# @kulala-openapi-explorer` blocks (foldable tree, try-it-out, load values from files, copy as HTTP)
+- **GraphQL explorer** for `# @kulala-graphql-explorer` blocks (schema field picker that writes the query back into the request)
 - **Environments** from kulala-core (`http-client.env.json`, kuba, etc.)
 - **Completion & hover** via kulala-core LSP helpers
 - **Diagnostics** in `.http` files
@@ -76,12 +77,12 @@ Kulala for Visual Studio Code uses
 **kulala-core** for editor intelligence
 (not a separate language-server binary):
 
-| Feature          | `.http` / `.rest`              | `*.http.js`                              | Inside `{% %}` scripts     |
-| ---------------- | ------------------------------ | ---------------------------------------- | -------------------------- |
-| Completion       | ✓                              | ✓ (script API)                           | ✓ (script API + variables) |
-| Hover            | ✓ (resolved request / GraphQL) | ✓ (script API)                           | ✓ (script API)             |
-| Diagnostics      | ✓ (parse errors)               | -                                        | -                          |
-| Document symbols | ✓ (request names)              | -                                        | -                          |
+| Feature          | `.http` / `.rest`              | `*.http.js`    | Inside `{% %}` scripts     |
+| ---------------- | ------------------------------ | -------------- | -------------------------- |
+| Completion       | ✓                              | ✓ (script API) | ✓ (script API + variables) |
+| Hover            | ✓ (resolved request / GraphQL) | ✓ (script API) | ✓ (script API)             |
+| Diagnostics      | ✓ (parse errors)               | -              | -                          |
+| Document symbols | ✓ (request names)              | -              | -                          |
 
 External script files must be named `something.http.js` when `kulala.enforceExternalScriptNamingConvention` is true (default), matching Neovim.
 
@@ -123,13 +124,13 @@ pnpm run build:syntax
 
 Optional environment variables:
 
-| Variable                      | Default                                                       | Purpose                                          |
-| ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------ |
+| Variable                      | Default                                                               | Purpose                                          |
+| ----------------------------- | --------------------------------------------------------------------- | ------------------------------------------------ |
 | `KULALA_HTTP_GRAMMAR_REPO`    | `https://github.com/dont-be-evil-company/tree-sitter-kulala-http.git` | Host grammar clone URL                           |
-| `KULALA_HTTP_GRAMMAR_REF`     | `main`                                                        | Host grammar branch or tag                       |
-| `KULALA_HTTP_GRAMMAR_DIR`     | `.cache/tree-sitter-kulala-http`                              | Host grammar cache                               |
-| `KULALA_GRAPHQL_GRAMMAR_REPO` | `https://github.com/joowani/tree-sitter-graphql.git`          | GraphQL grammar (npm package does not ship wasm) |
-| `KULALA_XML_GRAMMAR_REPO`     | `https://github.com/tree-sitter-grammars/tree-sitter-xml.git` | XML grammar (build in `xml/` subdir)             |
+| `KULALA_HTTP_GRAMMAR_REF`     | `main`                                                                | Host grammar branch or tag                       |
+| `KULALA_HTTP_GRAMMAR_DIR`     | `.cache/tree-sitter-kulala-http`                                      | Host grammar cache                               |
+| `KULALA_GRAPHQL_GRAMMAR_REPO` | `https://github.com/joowani/tree-sitter-graphql.git`                  | GraphQL grammar (npm package does not ship wasm) |
+| `KULALA_XML_GRAMMAR_REPO`     | `https://github.com/tree-sitter-grammars/tree-sitter-xml.git`         | XML grammar (build in `xml/` subdir)             |
 
 ## Example
 
@@ -160,6 +161,28 @@ GET https://petstore3.swagger.io/api/v3/openapi.json
   to copy a standalone `.http` request to the clipboard.
 - Use **Kulala: Clear OpenAPI Schema Cache** to drop cached specs.
 - Operation runs open the standard response panel (Monaco body).
+
+### GraphQL explorer
+
+Pick schema fields with `# @kulala-graphql-explorer`. Checking a field or argument rewrites the GraphQL body in the `.http` file:
+
+```http
+### People
+# @kulala-graphql-explorer
+GRAPHQL https://swapi-graphql.netlify.app/.netlify/functions/index
+
+query {
+  person(id: "cGVvcGxlOjE=") {
+    name
+  }
+}
+```
+
+- Running the block opens the **GraphQL explorer** (it does not send the query).
+- Use **Run** in the panel to execute the current query. The response opens in the normal response panel.
+- Use **Copy** to copy the request without the explorer directive.
+- Add `# @kulala-graphql-no-cache` to reload introspection instead of using the cached schema.
+- Use **Kulala: Open GraphQL Explorer** or the CodeLens on the block to open the pane.
 
 ## How it works
 

@@ -79,10 +79,7 @@ export type DaemonClient = {
     payload: Record<string, unknown>,
     options?: DaemonInvokeOptions,
   ): Promise<DaemonInvokeResult>;
-  invokeSync(
-    payload: Record<string, unknown>,
-    options?: DaemonInvokeOptions,
-  ): DaemonInvokeResult;
+  invokeSync(payload: Record<string, unknown>, options?: DaemonInvokeOptions): DaemonInvokeResult;
   cancel(id: string): void;
   cancelActive(): boolean;
   cancelAll(): boolean;
@@ -352,10 +349,7 @@ async function run(msg) {
 `;
 
 function workerFile(): string {
-  const file = join(
-    tmpdir(),
-    `kulala-daemon-worker-${WORKER_SOURCE_VERSION}.mjs`,
-  );
+  const file = join(tmpdir(), `kulala-daemon-worker-${WORKER_SOURCE_VERSION}.mjs`);
   if (!existsSync(file)) writeFileSync(file, WORKER_SOURCE);
   return file;
 }
@@ -419,12 +413,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
         endpoint?: string;
         protocol?: number;
       };
-      if (
-        !meta.token ||
-        !meta.endpoint ||
-        !meta.pid ||
-        meta.protocol !== DAEMON_PROTOCOL
-      )
+      if (!meta.token || !meta.endpoint || !meta.pid || meta.protocol !== DAEMON_PROTOCOL)
         return null;
       if (!isPidAlive(meta.pid)) return null;
       return {
@@ -456,10 +445,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
     mkdirSync(dirname(path), { recursive: true });
     try {
       const fd = openSync(path, "wx", 0o600);
-      writeSync(
-        fd,
-        JSON.stringify({ pid: process.pid, startedAt: Date.now() }),
-      );
+      writeSync(fd, JSON.stringify({ pid: process.pid, startedAt: Date.now() }));
       closeSync(fd);
       return true;
     } catch (error) {
@@ -468,9 +454,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
     }
   }
 
-  async function waitForMeta(
-    path: string,
-  ): Promise<ReturnType<typeof readMeta>> {
+  async function waitForMeta(path: string): Promise<ReturnType<typeof readMeta>> {
     const started = Date.now();
     while (Date.now() - started < START_TIMEOUT_MS) {
       const meta = readMeta(path);
@@ -552,9 +536,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
     if (message.op === "error" && typeof message.id !== "string") {
       helloReject?.(
         new DaemonUnavailable(
-          typeof message.error === "string"
-            ? message.error
-            : "daemon hello failed",
+          typeof message.error === "string" ? message.error : "daemon hello failed",
         ),
       );
       helloResolve = undefined;
@@ -647,8 +629,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
       else failPending(error);
     });
     next.on("close", () => {
-      if (helloReject)
-        helloReject(new DaemonUnavailable("daemon connection closed"));
+      if (helloReject) helloReject(new DaemonUnavailable("daemon connection closed"));
       else failPending(new DaemonUnavailable("daemon connection closed"));
     });
     next.write(
@@ -669,8 +650,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
   }
 
   function connection(): Promise<void> {
-    if (socket && !socket.destroyed && opening == null)
-      return Promise.resolve();
+    if (socket && !socket.destroyed && opening == null) return Promise.resolve();
     if (!opening) {
       opening = openSocket()
         .catch((error) => {
@@ -686,8 +666,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
   }
 
   function send(value: unknown): void {
-    if (!socket || socket.destroyed)
-      throw new DaemonUnavailable("daemon socket is closed");
+    if (!socket || socket.destroyed) throw new DaemonUnavailable("daemon socket is closed");
     socket.write(`${JSON.stringify(value)}\n`);
   }
 
@@ -767,15 +746,10 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
         if (timer) clearTimeout(timer);
         oneShot.delete(id);
         if (pendingLine) take(pendingLine);
-        const timedOut =
-          code === null &&
-          invokeOptions.timeoutMs &&
-          invokeOptions.timeoutMs > 0;
+        const timedOut = code === null && invokeOptions.timeoutMs && invokeOptions.timeoutMs > 0;
         resolve({
           stdout,
-          stderr: timedOut
-            ? stderr || "kulala-core subprocess timed out"
-            : stderr,
+          stderr: timedOut ? stderr || "kulala-core subprocess timed out" : stderr,
           code: timedOut ? 124 : (code ?? 1),
         });
       });
@@ -808,8 +782,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
           onEvent: (message) => {
             if (message.event !== "http-stream") return;
             const data = message.data as DaemonHttpStreamEvent | undefined;
-            if (data && data.type === "http-stream")
-              invokeOptions.onHttpStream?.(data);
+            if (data && data.type === "http-stream") invokeOptions.onHttpStream?.(data);
           },
         };
         if (invokeOptions.timeoutMs && invokeOptions.timeoutMs > 0) {
@@ -844,9 +817,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
       if (!(error instanceof DaemonUnavailable) && socket) {
         return { stdout: "", stderr: error.message, code: 1 };
       }
-      log(
-        `kulala-core daemon unavailable (${error.message}); using a one-shot process`,
-      );
+      log(`kulala-core daemon unavailable (${error.message}); using a one-shot process`);
       const exe = await executable();
       const { processEnv: _ignored, ...body } = payload;
       return oneShotInvoke(exe, body, invokeOptions, id);
@@ -869,9 +840,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
       `kulala-daemon-result-${randomBytes(8).toString("hex")}.json`,
     );
     const timeoutMs =
-      invokeOptions.timeoutMs && invokeOptions.timeoutMs > 0
-        ? invokeOptions.timeoutMs
-        : 60_000;
+      invokeOptions.timeoutMs && invokeOptions.timeoutMs > 0 ? invokeOptions.timeoutMs : 60_000;
     try {
       const thread = syncWorker();
       thread.postMessage({
@@ -941,9 +910,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
       worker = new Worker(workerFile());
       worker.unref();
       worker.on("error", (error) =>
-        log(
-          `kulala-core daemon worker: ${error instanceof Error ? error.message : String(error)}`,
-        ),
+        log(`kulala-core daemon worker: ${error instanceof Error ? error.message : String(error)}`),
       );
     }
     return worker;
@@ -1018,10 +985,7 @@ export function createDaemonClient(options: DaemonClientOptions): DaemonClient {
         `kulala-core daemon websocket failed (${error instanceof Error ? error.message : error}); using a one-shot process`,
       );
       const exe = await executable();
-      const tmp = join(
-        tmpdir(),
-        `kulala-ws-${Date.now()}-${randomBytes(4).toString("hex")}.json`,
-      );
+      const tmp = join(tmpdir(), `kulala-ws-${Date.now()}-${randomBytes(4).toString("hex")}.json`);
       writeFileSync(tmp, JSON.stringify(connect));
       const child = spawn(exe, ["--websocket", "-i", tmp], {
         cwd,

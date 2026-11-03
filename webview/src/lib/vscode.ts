@@ -4,13 +4,18 @@ import type {
   WebviewPayload,
 } from "../../../shared/response-view";
 import type {
+  GraphQLExtensionMessage,
+  GraphQLViewState,
+  GraphQLWebviewMessage,
+} from "../../../shared/graphql-view";
+import type {
   OpenAPIExtensionMessage,
   OpenAPIViewState,
   OpenAPIWebviewMessage,
 } from "../../../shared/openapi-view";
 
 type VsCodeApi = {
-  postMessage(message: WebviewMessage | OpenAPIWebviewMessage): void;
+  postMessage(message: WebviewMessage | OpenAPIWebviewMessage | GraphQLWebviewMessage): void;
   getState(): { tab?: WebviewPayload["tab"] } | undefined;
   setState(state: { tab: WebviewPayload["tab"] }): void;
 };
@@ -34,10 +39,25 @@ export function readInitialOpenapiPayload(): OpenAPIViewState | undefined {
   return window.__KULALA_OPENAPI__;
 }
 
+export function readInitialGraphqlPayload(): GraphQLViewState | undefined {
+  return window.__KULALA_GRAPHQL__;
+}
+
 export function listenForExtensionMessages(onState: (payload: WebviewPayload) => void): () => void {
   const handler = (event: MessageEvent<ExtensionMessage>) => {
     const message = event.data;
     if (message?.type === "state") {
+      onState(message.payload);
+    }
+  };
+  window.addEventListener("message", handler);
+  return () => window.removeEventListener("message", handler);
+}
+
+export function listenForGraphqlMessages(onState: (payload: GraphQLViewState) => void): () => void {
+  const handler = (event: MessageEvent<GraphQLExtensionMessage>) => {
+    const message = event.data;
+    if (message?.type === "graphqlState") {
       onState(message.payload);
     }
   };

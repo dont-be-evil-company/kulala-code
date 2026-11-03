@@ -95,6 +95,10 @@ function contentTypeFromBody(item: KulalaRequestResult): string | undefined {
   return body.mediaType ?? "text/plain";
 }
 
+function isFileTab(tab: vscode.Tab): tab is vscode.Tab & { input: vscode.TabInputText } {
+  return tab.input instanceof vscode.TabInputText;
+}
+
 export class ResponsePanel {
   private panel: vscode.WebviewPanel | undefined;
   private last: ResponseViewState | undefined;
@@ -104,8 +108,18 @@ export class ResponsePanel {
   private handlers: PanelHandlers = {};
   private webviewHtmlReady = false;
   private viewColumn: vscode.ViewColumn | undefined;
+  private relocating = false;
+  private relocateQueued = false;
+  private resultsGroupLocked = false;
+  private pendingTabs: vscode.Tab[] = [];
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(private readonly context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+      vscode.window.tabGroups.onDidChangeTabs((event) => {
+        this.scheduleKeepResultsOnTheRight(event.opened);
+      }),
+    );
+  }
 
   setHandlers(handlers: PanelHandlers): void {
     this.handlers = handlers;
@@ -343,10 +357,79 @@ export class ResponsePanel {
     };
   }
 
+  private resultsAreSplit(): boolean {
+    return (this.viewColumn ?? responseViewColumn()) !== vscode.ViewColumn.Active;
+  }
+
+  /** Keep the results group from accepting editors, so new files stay in the group to its left. */
+  private async lockResultsGroup(): Promise<void> {
+    const panel = this.panel;
+    if (!panel || this.resultsGroupLocked || !this.resultsAreSplit()) return;
+    panel.reveal(panel.viewColumn, false);
+    if (
+      panel.viewColumn != null &&
+      vscode.window.tabGroups.activeTabGroup.viewColumn !== panel.viewColumn
+    ) {
+      return;
+    }
+    try {
+      await vscode.commands.executeCommand("workbench.action.lockEditorGroup");
+      this.resultsGroupLocked = true;
+    } catch {
+      // The editor has no group-lock command.
+    }
+  }
+
+  private scheduleKeepResultsOnTheRight(opened: readonly vscode.Tab[]): void {
+    if (!this.panel || !this.resultsAreSplit() || opened.length === 0) return;
+    this.pendingTabs.push(...opened);
+    this.relocateQueued = true;
+    if (this.relocating) return;
+    void this.drainRelocate();
+  }
+
+  private async drainRelocate(): Promise<void> {
+    this.relocating = true;
+    try {
+      while (this.relocateQueued) {
+        this.relocateQueued = false;
+        await this.moveFilesLeftOfResults();
+      }
+    } finally {
+      this.relocating = false;
+    }
+  }
+
+  private async moveFilesLeftOfResults(): Promise<void> {
+    const panel = this.panel;
+    const responseColumn = panel?.viewColumn;
+    const opened = this.pendingTabs.splice(0);
+    if (!panel || responseColumn == null || responseColumn <= vscode.ViewColumn.One) return;
+
+    const destination =
+      vscode.window.tabGroups.all
+        .filter((group) => group.viewColumn < responseColumn)
+        .sort((a, b) => a.viewColumn - b.viewColumn)[0]?.viewColumn ?? vscode.ViewColumn.One;
+
+    const stray = opened.filter(isFileTab).filter((tab) => tab.group.viewColumn >= responseColumn);
+    if (stray.length === 0) return;
+
+    for (const tab of stray) {
+      if (tab.group.viewColumn < responseColumn) continue;
+      await vscode.window.showTextDocument(tab.input.uri, {
+        viewColumn: destination,
+        preserveFocus: true,
+        preview: false,
+      });
+    }
+    panel.reveal(panel.viewColumn, true);
+  }
+
   private ensurePanel(): void {
     const column = this.viewColumn ?? responseViewColumn();
     if (this.panel) {
       this.panel.reveal(column);
+      void this.lockResultsGroup();
       return;
     }
 
@@ -356,9 +439,11 @@ export class ResponsePanel {
       localResourceRoots: [webviewDistUri(this.context.extensionUri)],
     });
     this.panel.iconPath = panelIconPath(this.context);
+    void this.lockResultsGroup();
     this.panel.onDidDispose(() => {
       this.panel = undefined;
       this.webviewHtmlReady = false;
+      this.resultsGroupLocked = false;
     });
     this.panel.webview.onDidReceiveMessage(
       (msg: {

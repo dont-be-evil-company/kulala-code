@@ -11,6 +11,7 @@ import { KulalaCompletionProvider } from "./providers/completion";
 import { KulalaDiagnostics } from "./providers/diagnostics";
 import { KulalaDocumentSymbolProvider } from "./providers/documentSymbols";
 import { KulalaHoverProvider } from "./providers/hover";
+import { GraphQLPanel } from "./graphql/panel";
 import { OpenAPIPanel } from "./openapi/panel";
 import {
   getSessionQuery,
@@ -31,7 +32,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const bridge = new KulalaCoreBridge(context);
   const responsePanel = new ResponsePanel(context);
   const openapiPanel = new OpenAPIPanel(context);
-  const runner = new RequestRunner(bridge, context, responsePanel, openapiPanel);
+  const graphqlPanel = new GraphQLPanel(context, bridge);
+  const runner = new RequestRunner(bridge, context, responsePanel, openapiPanel, graphqlPanel);
   const diagnostics = new KulalaDiagnostics(bridge, context);
   const statusBar = new KulalaStatusBar(context);
 
@@ -147,6 +149,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       });
       picker.show();
       run(getSessionQuery());
+    }),
+    vscode.commands.registerCommand("kulala.openGraphqlExplorer", async (atLine?: number) => {
+      const editor = activeHttpEditor();
+      if (!editor) return;
+      const pos =
+        typeof atLine === "number"
+          ? revivePosition({ line: atLine, character: 0 }, editor.selection.active)
+          : editor.selection.active;
+      editor.selection = new vscode.Selection(pos, pos);
+      await runner.openGraphqlExplorer(documentContext(editor));
     }),
     vscode.commands.registerCommand("kulala.openOpenapiExplorer", async (atLine?: number) => {
       const editor = activeHttpEditor();

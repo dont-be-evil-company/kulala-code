@@ -3,11 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { corePath, coreVersion, downloadUrlTemplate } from "../config";
-import {
-  LICENSE_TOKEN_HELP,
-  throwIfLicenseRejected,
-  withLicenseToken,
-} from "./license-token";
+import { LICENSE_TOKEN_HELP, throwIfLicenseRejected, withLicenseToken } from "./license-token";
 import { installedBinaryName, releaseAssetName } from "./platform";
 
 export function binDir(context: vscode.ExtensionContext): string {
