@@ -1,4 +1,4 @@
-## [2.0.0](https://github.com/dont-be-evil-company/kulala.vscode/compare/v1.0.1...v2.0.0) (2026-10-21)
+## [3.0.0](https://github.com/dont-be-evil-company/kulala.vscode/compare/v1.0.1...v3.0.0) (2026-11-13)
 
 ### ⚠ BREAKING CHANGES
 
@@ -7,7 +7,9 @@
 ### Features
 
 * clean-up env, rm ts+lua scripting, update tree-sitter ([26d2a1b](https://github.com/dont-be-evil-company/kulala.vscode/commit/26d2a1b97d0c1daafe601aab862ce3ec5612cb8c))
+* **core:** daemon over ipc ([4a6088a](https://github.com/dont-be-evil-company/kulala.vscode/commit/4a6088a1f955061315c6654f11ffa9b1a603a0fa))
 * global search ([8bcb6a0](https://github.com/dont-be-evil-company/kulala.vscode/commit/8bcb6a0e58d3ebb05cf6b2ff0b8facccc5c6d3b2))
+* **gql:** add GraphQL-Explorer ([c128023](https://github.com/dont-be-evil-company/kulala.vscode/commit/c128023b3a950662e917be7bd954c1719c60291c))
 
 ### Bug Fixes
 
