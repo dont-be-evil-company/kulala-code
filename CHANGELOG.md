@@ -1,3 +1,15 @@
+## [3.0.2](https://github.com/dont-be-evil-company/kulala.vscode/compare/v3.0.1...v3.0.2) (2026-11-18)
+
+### Bug Fixes
+
+* **cookies:** cookies only sent when manually set via header ([b0ca4ec](https://github.com/dont-be-evil-company/kulala.vscode/commit/b0ca4ec7bd13d037d9e5a11d208eca4294637a56))
+
+## [3.0.1](https://github.com/dont-be-evil-company/kulala.vscode/compare/v3.0.0...v3.0.1) (2026-11-13)
+
+### Bug Fixes
+
+* **backend:** update backend version to 3.1.0 ([fd0e565](https://github.com/dont-be-evil-company/kulala.vscode/commit/fd0e5653f378ce8d22621261e46b4662b8c6d722))
+
 ## [3.0.0](https://github.com/dont-be-evil-company/kulala.vscode/compare/v1.0.1...v3.0.0) (2026-11-13)
 
 ### ⚠ BREAKING CHANGES
